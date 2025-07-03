@@ -4,6 +4,7 @@
 	TL;DR: Detects mainy hooks, references, scripts, and executors.
 	Communicates to the server with an aes256 encrypted handshake,
 	so disabling the script will NOT work.
+	Warning: This doesn't function without the server code
 ]]
 
 local AnticheatFlag = nil;
