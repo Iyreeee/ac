@@ -4,7 +4,6 @@
 	TL;DR: Detects mainy hooks, references, scripts, and executors.
 	Communicates to the server with an aes256 encrypted handshake,
 	so disabling the script will NOT work.
-	Warning: This doesn't function without the server code
 ]]
 
 local AnticheatFlag = nil;
@@ -567,7 +566,6 @@ end
 
 --// the executor Xeno executes luau code on injection internally which tries to access these services without :GetService, so this overrides it
 game:GetService("GamePassService").Name = "CorePackages";
-game:GetService("TestService").Name = "RobloxReplicatedStorage";
 
 --// reference detections
 coroutine.wrap(function()
@@ -622,12 +620,15 @@ coroutine.wrap(function()
 	end
 end)();
 
+
+
 script.Parent = nil;
 script.Name = tostring(AC_RANDOM_RANGE(1e5, 9e9));
 
 local NamecallViolations = 0;
 local NewIndexViolations = 0;
 local IndexViolations = 0;
+local BlockedViolations = 0;
 
 --// HANDSHAKE
 while true do
@@ -698,20 +699,20 @@ while true do
 	end
 
 	--// some strings and instances initialized outside to prevent being able to read in the obfuscated source, since LPH_NO_VIRTUALIZE basically doesnt obfuscate a that part of the script
-	local d1 = "Internal Namecall Hook (1)";
-	local d2 = "Metamethod Hook (5)";
-	local d3 = "Metamethod Hook (6)";
-	local t = time;
-	local p = pcall;
-	local e = Instance.new("BindableEvent");
-	local h = Instance.new("Humanoid");
+	local detection1 = "Internal Namecall Hook (1)";
+	local detection4 = "I don't like you (2)";
+	local pcall = pcall;
+	local event = Instance.new("BindableEvent");
+	local humanoid = Instance.new("Humanoid");
+	local blocked = game.OpenScreenshotsFolder;
 
 	LPH_NO_VIRTUALIZE(function() --// tick checks, call metamethods a lot of times then call nothing a lot of times, and check the ratio between time taken for both, this detects 99% hooks. And no this can't false flag, it takes multiple violations when 1 false violations is already extremely rare
 		local index = AC_GETMETAMETHOD(function() return Instance.new('Folder').___; end);
 
-		local pcall = p;
-		local event = e;
-		local hum = h;
+		local pcall = pcall;
+		local event = event;
+		local hum = humanoid;
+		local blocked = blocked;
 
 		do -- namecall, this detects wave, shows how incompetent the devs are (it's 7 bucks a week btw💀)
 			local t1 = tick();
@@ -723,54 +724,40 @@ while true do
 			for i = 1, (1e4 / 2) do end;
 			local t3 = tick();
 			local ratio = (t2-t1)/(t3-t2);
-			if ratio > 40 then
+			if ratio > 60 then
 				NamecallViolations += 1;
 			else
 				NamecallViolations = 0;
 			end
-			if NamecallViolations > 8 then
-				AnticheatFlag = d1;
+			if NamecallViolations > 7 then
+				AnticheatFlag = detection1;
 			end
 		end
 
-		do -- newindex
+		do -- blocked func (this detects hooks on blocked/vulnerable functions)
 			local t1 = tick();
-			for i = 1, (1e4 / 2) do
-				hum['WalkSpeed'] = 16;
+			for i = 1, (1e4 / 3) do
+				pcall(blocked, game);
 			end
 			local t2 = tick();
-			for i = 1, (1e4 / 2) do end;
+			for i = 1, (1e4 / 3) do end;
 			local t3 = tick();
 			local ratio = (t2-t1)/(t3-t2);
-			if ratio > 50 then
-				NewIndexViolations += 1;
+			if ratio > 2200 then
+				BlockedViolations += 1;
 			else
-				NewIndexViolations = 0;
+				BlockedViolations = 0;
 			end
-			if NewIndexViolations > 6 then
-				AnticheatFlag = d2;
+			if BlockedViolations > 10 then -- practically impossible to false flag
+				AnticheatFlag = detection4;
 			end
 		end
 
-		do -- index
-			local t1 = tick();
-			for i = 1, (1e4 / 2) do
-				index(hum, "WalkSpeed");
-			end
-			local t2 = tick();
-			for i = 1, (1e4 / 2) do end;
-			local t3 = tick();
-			local ratio = (t2-t1)/(t3-t2);
-			if ratio > 50 then
-				IndexViolations += 1;
-			else
-				IndexViolations = 0;
-			end
-			if IndexViolations > 6 then
-				AnticheatFlag = d3;
-			end
-		end
+		hum:Destroy();
+		event:Destroy();
 	end)();
+
+	game:GetService("GamePassService").Name = "CorePackages";
 
 	--// simple wrap detections for hooks
 	if AC_C_IS_HOOKED(__namecall) or AC_C_IS_HOOKED(__index) or AC_C_IS_HOOKED(__newindex) then
@@ -783,8 +770,30 @@ while true do
 		end
 	end
 
-	if game:GetService("TestService"):FindFirstChild("__XENO") then
+	if game.FindService(game, "AppUpdateService") then
 		AnticheatFlag = "Xeno Executor (2)";
+	end
+
+	--// detects popular cheat assets being loaded
+	for _,v in {"rbxassetid://5147695474",
+		"rbxassetid://5054663650",
+		"rbxassetid://5147488658",
+		"rbxassetid://129697930",
+		"rbxassetid://4911962991",
+		"rbxassetid://5147488592",
+		"rbxassetid://4113050383",
+		"rbxassetid://1352543873",
+		"rbxassetid://2406617031",
+		"rbxassetid://6234691350",
+		"rbxassetid://3523243755",
+		"rbxassetid://1204397029",
+		"rbxassetid://10804731440",
+		"rbxassetid://10137941941",
+		"rbxassetid://5642383285",
+		"rbxassetid://2406617031",} do
+		if Service.ContentProvider:GetAssetFetchStatus(v) ~= Enum.AssetFetchStatus.None then
+			AnticheatFlag = "I don't like you (1)";
+		end
 	end
 
 	--// handshake, encrypts the current flag or handshake message and sends it to the server
