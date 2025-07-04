@@ -700,7 +700,6 @@ while true do
 
 	--// some strings and instances initialized outside to prevent being able to read in the obfuscated source, since LPH_NO_VIRTUALIZE basically doesnt obfuscate a that part of the script
 	local detection1 = "Internal Namecall Hook (1)";
-	local detection4 = "I don't like you (2)";
 	local pcall = pcall;
 	local event = Instance.new("BindableEvent");
 	local humanoid = Instance.new("Humanoid");
@@ -731,25 +730,6 @@ while true do
 			end
 			if NamecallViolations > 7 then
 				AnticheatFlag = detection1;
-			end
-		end
-
-		do -- blocked func (this detects hooks on blocked/vulnerable functions)
-			local t1 = tick();
-			for i = 1, (1e4 / 3) do
-				pcall(blocked, game);
-			end
-			local t2 = tick();
-			for i = 1, (1e4 / 3) do end;
-			local t3 = tick();
-			local ratio = (t2-t1)/(t3-t2);
-			if ratio > 2200 then
-				BlockedViolations += 1;
-			else
-				BlockedViolations = 0;
-			end
-			if BlockedViolations > 10 then -- practically impossible to false flag
-				AnticheatFlag = detection4;
 			end
 		end
 
